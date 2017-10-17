@@ -9,16 +9,14 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 public class Sorter {
-  private Map<String, Counter> bucketFrequencies;
+  private Map<Integer, Counter> bucketFrequencies;
 
-  private List<Hit> sort(List<Hit> hits) {
-    int slotShift = 5;
+  private List<Hit> sort(List<Hit> hits, long slotShift) {
+    bucketFrequencies = new HashMap<Integer, Counter>();
 
-    bucketFrequencies = new HashMap<String, Counter>();
-
-    Map<String, Counter> distinctBucketSlotFrequencies = new HashMap<String, Counter>();
-    Map<String, Counter> bucketSlotFrequencies = new HashMap<String, Counter>();
-    Map<String, List<Hit>> buckets = new HashMap<String, List<Hit>>();
+    Map<Integer, Counter> distinctBucketSlotFrequencies = new HashMap<Integer, Counter>();
+    Map<Long, Counter> bucketSlotFrequencies = new HashMap<Long, Counter>();
+    Map<Integer, List<Hit>> buckets = new HashMap<Integer, List<Hit>>();
 
     for(Hit hit : hits) {
       Counter bucketCounter = bucketFrequencies.get(hit.getBucket());
@@ -94,7 +92,7 @@ public class Sorter {
     return res;
   }
 
-  public void sort(JSONObject jsonResponse, long from, long newFrom, long size, boolean includeAggregations) {
+  public void sort(JSONObject jsonResponse, long from, long newFrom, long size, long slotShift, boolean includeAggregations) {
     JSONArray hits = (JSONArray)((JSONObject)jsonResponse.get("hits")).get("hits");
 
     int total = hits.size();
@@ -104,7 +102,7 @@ public class Sorter {
     for(i = 0; i < hits.size(); i++)
       sortHits.add(new Hit((JSONObject)hits.get(i), i));
 
-    List<Hit> sortedHits = sort(sortHits);
+    List<Hit> sortedHits = sort(sortHits, slotShift);
 
     hits.clear();
 
@@ -117,7 +115,7 @@ public class Sorter {
     if(includeAggregations) {
       JSONObject aggregation = new JSONObject();
 
-      for(Map.Entry<String, Counter> entry : bucketFrequencies.entrySet())
+      for(Map.Entry<Integer, Counter> entry : bucketFrequencies.entrySet())
         aggregation.put(entry.getKey(), entry.getValue().getValue());
 
       JSONObject aggregations = new JSONObject();

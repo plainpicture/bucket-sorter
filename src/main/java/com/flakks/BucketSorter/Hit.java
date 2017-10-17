@@ -6,7 +6,9 @@ import org.json.simple.JSONArray;
 
 public class Hit {
   private JSONObject hit;
-  private String id, bucket, slot, bucketSlot;
+  private String id;
+  private int bucket, slot;
+  private long bucketSlot;
   private double bucketScore, sortScore;
   private int originalIndex;
   
@@ -16,13 +18,13 @@ public class Hit {
     this.hit = hit;
     this.originalIndex = originalIndex;
 
-    this.id = ((JSONArray)fields.get("id")).get(0).toString();
-    //this.bucket = ((JSONArray)fields.get("license")).get(0).toString() + ":" + ((JSONArray)fields.get("collection_id")).get(0).toString();
-    this.bucket = fields.get("collection_id") == null ? "_null_" : ((JSONArray)fields.get("collection_id")).get(0).toString();
-    this.slot = ((JSONArray)fields.get("supplier_id")).get(0).toString();
-    this.bucketSlot = bucket + ":" + slot;
+    this.id = (String)((JSONArray)fields.get("id")).get(0);
+    this.bucket = (int)(long)((JSONArray)fields.get("bucket")).get(0);
+    this.slot = (int)(long)((JSONArray)fields.get("slot")).get(0);
 
-    this.bucketScore = (double)((JSONArray)fields.get("collection_score")).get(0);
+    this.bucketSlot = ((long)bucket << 32) | slot;
+
+    this.bucketScore = (double)((JSONArray)fields.get("bucket_score")).get(0);
 
     hit.put("_id", id);
   }
@@ -47,19 +49,19 @@ public class Hit {
     return hit;
   }
 
-  public String getBucket() {
+  public int getBucket() {
     return bucket;
   }
 
-  public String getSlot() {
+  public int getSlot() {
     return slot;
-  }
-
-  public String getBucketSlot() {
-    return bucketSlot;
   }
 
   public double getBucketScore() {
     return bucketScore;
+  }
+
+  public long getBucketSlot() {
+    return bucketSlot;
   }
 }
