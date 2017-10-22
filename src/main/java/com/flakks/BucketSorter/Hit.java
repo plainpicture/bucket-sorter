@@ -1,36 +1,30 @@
 
 package com.flakks.BucketSorter;
 
-import org.json.simple.JSONObject;
-import org.json.simple.JSONArray;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class Hit {
-  private JSONObject hit;
-  private String id;
+  private JsonNode hit;
+  private Long id;
   private int bucket, slot;
   private long bucketSlot;
   private double bucketScore, sortScore;
   private int originalIndex;
   
-  public Hit(JSONObject hit, int originalIndex) {
-    JSONObject fields = (JSONObject)hit.get("fields");
+  public Hit(JsonNode hit, int originalIndex) {
+    JsonNode fields = hit.get("fields");
 
     this.hit = hit;
     this.originalIndex = originalIndex;
 
-    this.id = (String)((JSONArray)fields.get("id")).get(0);
-    this.bucket = (int)(long)((JSONArray)fields.get("bucket")).get(0);
-    this.slot = (int)(long)((JSONArray)fields.get("slot")).get(0);
+    this.id = fields.get("id").get(0).asLong();
+    this.bucket = fields.get("bucket").get(0).asInt();
+    this.slot = fields.get("slot").get(0).asInt();
+    this.bucketScore = fields.get("bucket_score").get(0).asDouble();
+    this.bucketSlot = ((long)bucket << 32) | (long)slot;
 
-    this.bucketSlot = ((long)bucket << 32) | slot;
-
-    this.bucketScore = (double)((JSONArray)fields.get("bucket_score")).get(0);
-
-    hit.put("_id", id);
-  }
-
-  public String getId() {
-    return id;
+    ((ObjectNode)hit).put("_id", id.toString());
   }
 
   public void setSortScore(double sortScore) {
@@ -45,7 +39,7 @@ public class Hit {
     return originalIndex;
   }
 
-  public JSONObject getHit() {
+  public JsonNode getHit() {
     return hit;
   }
 

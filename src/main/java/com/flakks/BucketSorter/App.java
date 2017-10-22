@@ -12,10 +12,10 @@ import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONArray;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.stream.Collectors;
 
 public class App extends AbstractHandler {
@@ -28,23 +28,23 @@ public class App extends AbstractHandler {
 
   public void handle(String target, Request request, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws IOException, ServletException {
     try {
-      long t1, t2, t3, t4;
+      long t1, t2;
 
       t1 = new Date().getTime();
 
-      JSONParser jsonParser = new JSONParser();
-      JSONObject jsonRequest = (JSONObject)jsonParser.parse(request.getReader());
+      ObjectMapper objectMapper = new ObjectMapper();
+      ObjectNode jsonRequest = (ObjectNode)objectMapper.readTree(request.getReader());
 
-      long from = (long)jsonRequest.get("from");
-      long size = (long)jsonRequest.get("size");
+      long from = jsonRequest.get("from").asLong();
+      long size = jsonRequest.get("size").asLong();
 
-      JSONObject bucketSort = (JSONObject)jsonRequest.get("bucket_sort");
+      JsonNode bucketSort = jsonRequest.get("bucket_sort");
 
-      long window = (long)bucketSort.get("window");
+      long window = bucketSort.get("window").asLong();
 
       long newFrom = (from / window) * window;
 
-      JSONArray docvalueFields = new JSONArray();
+      ArrayNode docvalueFields = objectMapper.createArrayNode();
       docvalueFields.add("id");
       docvalueFields.add("bucket");
       docvalueFields.add("slot");
@@ -58,7 +58,7 @@ public class App extends AbstractHandler {
       jsonRequest.remove("_source");
       jsonRequest.remove("bucket_sort");
 
-      HttpResponse<String> unirestResponse = Unirest.post(((String)bucketSort.get("base_url")) + request.getRequestURI())
+      HttpResponse<String> unirestResponse = Unirest.post(bucketSort.get("base_url").asText() + request.getRequestURI())
         .header("accept", "application/json")
         .header("content-type", "application/json")
         .body(jsonRequest.toString())
@@ -69,34 +69,26 @@ public class App extends AbstractHandler {
 
       if(unirestResponse.getStatus() < 200 || unirestResponse.getStatus() > 299) {
         httpServletResponse.getWriter().print(unirestResponse.getBody());
+        httpServletResponse.setStatus(unirestResponse.getStatus());
         request.setHandled(true);
 
         return;
       }
 
+      ObjectNode jsonResponse = (ObjectNode)objectMapper.readTree(unirestResponse.getBody());
+
+      new Sorter().sort(objectMapper, jsonResponse, from, newFrom, size, bucketSort.get("slot_shift").asLong(), bucketSort.get("aggregations").asBoolean());
+
       t2 = new Date().getTime();
 
-      JSONObject jsonResponse = (JSONObject)jsonParser.parse(unirestResponse.getBody());
-
-      t3 = new Date().getTime();
-
-      new Sorter().sort(jsonResponse, from, newFrom, size, (long)bucketSort.get("slot_shift"), (boolean)bucketSort.get("aggregations"));
-
-      t4 = new Date().getTime();
-
-      System.out.println("request: " + (t2 - t1) + " took: " + jsonResponse.get("took"));
-      System.out.println("parsing: " + (t3 - t2));
-      System.out.println("sorting: " + (t4 - t3));
-      System.out.println("total: " + (t4 - t1));
-      System.out.println("---");
-
-      jsonResponse.put("took", t4 - t1);
+      jsonResponse.put("original_took", jsonResponse.get("took"));
+      jsonResponse.put("took", t2 - t1);
 
       httpServletResponse.setContentType("application/json");
       httpServletResponse.getWriter().print(jsonResponse.toString());
 
       request.setHandled(true);
-    } catch(ParseException | UnirestException e) {
+    } catch(UnirestException e) {
       e.printStackTrace();
     }
   }

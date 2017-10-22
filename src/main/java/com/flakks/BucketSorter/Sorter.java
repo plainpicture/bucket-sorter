@@ -5,8 +5,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Comparator;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class Sorter {
   private Map<Integer, Counter> bucketFrequencies;
@@ -73,9 +75,7 @@ public class Sorter {
       });
 
       for(Hit hit : bucket) {
-        double score = index * (1.0 - hit.getBucketScore()) * (hits.size() / (double)bucketFrequencies.get(hit.getBucket()).getValue()) + (hit.getOriginalIndex() / (double)hits.size());
-
-        hit.setSortScore(score);
+        hit.setSortScore((index + 1) * (1.0 - hit.getBucketScore()) * (hits.size() / (double)bucketFrequencies.get(hit.getBucket()).getValue()) + (hit.getOriginalIndex() / (double)hits.size()));
 
         res.add(hit);
 
@@ -92,37 +92,42 @@ public class Sorter {
     return res;
   }
 
-  public void sort(JSONObject jsonResponse, long from, long newFrom, long size, long slotShift, boolean includeAggregations) {
-    JSONArray hits = (JSONArray)((JSONObject)jsonResponse.get("hits")).get("hits");
+  public void sort(ObjectMapper objectMapper, JsonNode jsonResponse, long from, long newFrom, long size, long slotShift, boolean includeAggregations) {
+    ArrayNode hits = (ArrayNode)jsonResponse.get("hits").get("hits");
 
     int total = hits.size();
     List<Hit> sortHits = new ArrayList<Hit>(total);
     int i;
 
     for(i = 0; i < hits.size(); i++)
-      sortHits.add(new Hit((JSONObject)hits.get(i), i));
+      sortHits.add(new Hit(hits.get(i), i));
 
     List<Hit> sortedHits = sort(sortHits, slotShift);
 
-    hits.clear();
+    hits.removeAll();
 
     int start = (int)(from - newFrom);
     int stop = Math.min(sortedHits.size(), start + (int)size);
 
-    for(i = start; i < stop; i++)
-      hits.add(sortedHits.get(i).getHit());
+    for(i = start; i < stop; i++) {
+      Hit hit = sortedHits.get(i);
+
+      ((ObjectNode)hit.getHit()).put("bucket_sort", hit.getSortScore());
+
+      hits.add(hit.getHit());
+    }
 
     if(includeAggregations) {
-      JSONObject aggregation = new JSONObject();
+      ObjectNode aggregation = objectMapper.createObjectNode();
 
       for(Map.Entry<Integer, Counter> entry : bucketFrequencies.entrySet())
-        aggregation.put(entry.getKey(), entry.getValue().getValue());
+        aggregation.put(entry.getKey().toString(), entry.getValue().getValue());
 
-      JSONObject aggregations = new JSONObject();
+      ObjectNode aggregations = objectMapper.createObjectNode();
 
       aggregations.put("buckets", aggregation);
 
-      jsonResponse.put("aggregations", aggregations);
+      ((ObjectNode)jsonResponse).put("aggregations", aggregations);
     }
   }
 }
