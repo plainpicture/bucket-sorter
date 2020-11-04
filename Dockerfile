@@ -1,6 +1,8 @@
-FROM alpine
+FROM alpine:3.12.1
 
-RUN apk update && apk add git maven openjdk8
-RUN git clone https://github.com/plainpicture/bucket-sorter.git && cd bucket-sorter && mvn clean package -DskipTests
-CMD cd bucket-sorter && sh start.sh
+RUN apk --no-cache add git=2.26.2-r0 maven=3.6.3-r0 openjdk8=8.252.09-r0
+COPY . /usr/local/src/bucket-sorter
+WORKDIR /usr/local/src/bucket-sorter
+RUN mvn clean package -DskipTests
+CMD ["sh", "start.sh"]
 EXPOSE 19400
