@@ -11,7 +11,7 @@ public class Hit {
   private long bucketSlot;
   private double bucketScore, sortScore;
   private int originalIndex;
-  
+
   public Hit(JsonNode hit, int originalIndex) {
     JsonNode fields = hit.get("fields");
 

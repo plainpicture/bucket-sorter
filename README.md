@@ -8,4 +8,3 @@ parameters to match the desired window size, fetches the results from
 ElasticSearch and resorts the hits to maximize the distance between the them
 within the result window. The distance is calculated via 3 fields extracted
 from the docvalue fields `bucket`, `slot` and `bucket_score`.
-

@@ -86,4 +86,3 @@ public class HitTest extends TestCase {
     assertEquals(4294967298l, hit.getBucketSlot());
   }
 }
-
