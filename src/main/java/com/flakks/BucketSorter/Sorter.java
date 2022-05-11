@@ -125,9 +125,9 @@ public class Sorter {
 
       ObjectNode aggregations = objectMapper.createObjectNode();
 
-      aggregations.put("buckets", aggregation);
+      aggregations.set("buckets", aggregation);
 
-      ((ObjectNode)jsonResponse).put("aggregations", aggregations);
+      ((ObjectNode)jsonResponse).set("aggregations", aggregations);
     }
   }
 }
