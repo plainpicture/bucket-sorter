@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 public class App extends AbstractHandler {
   public static void main(String[] args) throws Exception {
-    Server server = new Server(19401);
+    Server server = new Server(19400);
     server.setHandler(new App());
     server.start();
     server.join();
@@ -53,19 +53,16 @@ public class App extends AbstractHandler {
       jsonRequest.put("from", newFrom);
       jsonRequest.put("size", window);
       jsonRequest.put("stored_fields", "_none_");
-      jsonRequest.set("docvalue_fields", docvalueFields);
+      jsonRequest.put("docvalue_fields", docvalueFields);
 
       jsonRequest.remove("_source");
       jsonRequest.remove("bucket_sort");
-
-    
 
       HttpResponse<String> unirestResponse = Unirest.post(bucketSort.get("base_url").asText() + request.getRequestURI())
         .header("accept", "application/json")
         .header("content-type", "application/json")
         .body(jsonRequest.toString())
         .asString();
-
 
       httpServletResponse.setStatus(unirestResponse.getStatus());
       httpServletResponse.setCharacterEncoding("utf-8");
@@ -84,7 +81,7 @@ public class App extends AbstractHandler {
 
       t2 = new Date().getTime();
 
-      jsonResponse.set("original_took", jsonResponse.get("took"));
+      jsonResponse.put("original_took", jsonResponse.get("took"));
       jsonResponse.put("took", t2 - t1);
 
       httpServletResponse.setContentType("application/json");
